@@ -11,146 +11,70 @@ import numpy as np
 
 pd.set_option('display.max_rows', 100)
 pd.set_option('display.max_columns', 100)
-users = pd.read_csv('analytics_daily_users.csv')
-#pageviews = pd.read_csv('analytics_daily_pageviews.csv')
 packages = pd.read_csv('packages.csv')
-#packages_undeployed = pd.read_csv('packages_undeployed.csv')
-#print(packages_undeployed.describe())
-#print(packages_undeployed[packages_undeployed['winner']])
 
-#Look at first place data
+
+#Preprocessing
+packages['test_week'] = pd.to_datetime(packages['test_week'])
 packages['click_rate'] = packages['clicks'] / packages['impressions']
 first_places = packages[packages['first_place']]
-first_places_click_rate = first_places[['test_id', 'clicks']].set_index('test_id')
-packages['clicks_2'] = packages['clicks']
-max_click_rate = packages.groupby('test_id')['clicks_2'].max()
+winners = packages[packages['winner']]
 
+#Look at first_place data
+tests = packages.groupby('test_id').sum()['first_place']
+print(tests.value_counts())
+print(tests[tests == 1].shape[0] / tests.shape[0]) #Ratio of tests with 1 first_place
+#Look at tests without a first_place
+print(tests[tests == 0].head())
+print(packages[packages['test_id'] == '55158fe8616664002c240000'])
+
+#See if first_place corresponds to highest click_rate
+
+first_places_click_rate = first_places[['test_id', 'click_rate']].set_index('test_id')
+max_click_rate = packages.groupby('test_id')['click_rate'].max()
+max_click_rate.rename('click_rate_2', inplace=True)
 df = pd.concat([first_places_click_rate, max_click_rate], axis = 1)
-print(df)
-print(np.mean(df['clicks'] == df['clicks_2']))
-#32122 tests have had a single first place, 365 tests did not
-#0.8749 of the max click rates and first places agree
+df.dropna(axis = 0, inplace=True)
+print(np.mean(df['click_rate'] == df['click_rate_2'])) # Look at percentage of first_place having highest click_rate as well
+#Look at tests where first_place doesn't correspond to maximum click_rate
+print(df[~(df['click_rate'] == df['click_rate_2'])].head())
+print(packages[packages['test_id'] == '54737147d289f68ac400001a'])
 
 
-'''
-users = users.replace(',','', regex=True)
-users = users.replace('%','', regex=True)
-users['users'] = pd.to_numeric(users['users'])
-users['new_users'] = pd.to_numeric(users['new_users'])
-users['sessions'] = pd.to_numeric(users['sessions'])
-users['pageviews'] = pd.to_numeric(users['pageviews'])
-users['bounce_rate'] = pd.to_numeric(users['bounce_rate'])
-users['date'] = pd.to_datetime(users['date'])
-print(users[100:150])
-'''
+#Look at winners data
+print(packages.groupby('test_id')['winner'].sum().value_counts()) #Winners per test
+print(winners['first_place'].mean()) #Proportion of winners that were first_place
 
-'''
-#Not all test ids have a first place! (355 don't have) [negligible?]
-no_first_place = packages.groupby('test_id').mean()
-no_first_place = no_first_place[no_first_place['first_place'] == 0]
-print(packages[packages['test_id'] == '51436060220cb800020001df'])
+#Look at winners that are not first_place
+print(winners[~winners['first_place']].head())
+print(packages[packages['test_id'] == '549443b93732320018260000'])
+print(packages[packages['test_id'] == '549481a43062640024340000'])
+print(packages[packages['test_id'] == '547278e0ce85339079000038'])
 
 
-print(len(packages['test_id'].value_counts()))
-print(packages[packages['first_place']].shape)
-diff = packages[packages['test_id'] == '53fca78325bba9673e00002f']
-'''
-'''
-packages['test_week'] = pd.to_datetime(packages['test_week'])
-packages['created_at'] = pd.to_datetime(packages['created_at'])
-packages['diff'] = packages['test_week'] - packages['created_at']
+#Click rate distribution for first_place and winner
+print(packages['click_rate'].mean())
+print(first_places['click_rate'].mean())
+print(winners['click_rate'].mean())
 
-plt.hist(packages['diff'])
-'''
-#packages.sort_values('test_week', inplace=True)
-#print(packages)
-
-
-
-#print(packages[packages['click_rate'] == 0])
-#print(packages['click_rate'].isna().sum())
-'''
-#Normality testing
-from scipy.stats import anderson
-from statsmodels.graphics.gofplots import qqplot
-nonzero_packages = packages[~(packages['click_rate'] == 0)]
-packages['log_click_rate'] = np.log(nonzero_packages['click_rate'])
-
-data = packages['log_click_rate'].values
-data = data[~np.isnan(data)]
-
-result = anderson(data, dist='norm')
-print('Statistic: %.3f' % result.statistic)
-p = 0
-for i in range(len(result.critical_values)):
-	sl, cv = result.significance_level[i], result.critical_values[i]
-	if result.statistic < result.critical_values[i]:
-		print('%.3f: %.3f, data looks normal (fail to reject H0)' % (sl, cv))
-	else:
-		print('%.3f: %.3f, data does not look normal (reject H0)' % (sl, cv))
-'''
-
-'''
-average_click_rate = packages.groupby('test_week')['click_rate'].mean()
-#print(average_click_rate.head())
-users = users.replace(',','', regex=True)
-users['new_users'] = pd.to_numeric(users['new_users'])
-new_users = users.set_index('date')['new_users']
-#print(new_users.head())
-'''
-
-#Some headlines were tested multiple times
-#print(packages[packages['headline'] == 'Dustin Hoffman Breaks Down Crying Explaining Something That Every Woman Sadly Already Experienced'])
-
-#packages['agree'] = (packages['first_place'] == packages['winner'])
-#packages['highest'] = 0
-#grouped_df = packages.groupby('test_id')['clicks'].max()
-
-
-#chosen = packages[packages['winner']]
-#first_place = packages[packages['first_place']]
-#not_first_place = packages[~packages['first_place']]
-'''
-plt.title('Proportion of first places chosen by editors over time')
-plt.plot(first_place.groupby('test_week')['winner'].mean())
-plt.savefig('chosen_first_places.png')
-'''
-#print(first_place['winner'].mean()) #Out of first places, only 18% chosen by editors.
-#Why is that?
-#first_place_chosen = first_place[first_place['winner']]
-#first_place_not_chosen = first_place[~first_place['winner']]
-#not_first_place_chosen = not_first_place[not_first_place['winner']]
-#print(not_first_place_chosen.shape[0]) #1948
-#print(first_place_chosen.shape[0]) #5716
-#print(first_place_not_chosen.shape[0]) #26406
-#print(not_first_place.shape[0]) #118695
-#print(first_place_chosen.loc[1000:1500, ['headline', 'click_rate']])
-#print(first_place_not_chosen.loc[1000:1500, ['headline', 'click_rate']])
-
-
-#not_first_place = packages[~packages['first_place']]
-#print(not_first_place['winner'].mean()) #Out of not first places, 1.6% chosen by editors.
-'''
 plt.Figure()
-plt.hist(first_place['click_rate'], 30, (0, .1))
+plt.hist(first_places['click_rate'], 30, (0, .1))
 plt.title("Click rate distribution for first place")
-plt.savefig('first_place_click_rate.png')
+#plt.savefig('first_place_click_rate.png')
 plt.show()
 plt.Figure()
 plt.title("Click rate distribution for winners")
-plt.hist(chosen['click_rate'], 30, (0, .1))
-plt.savefig('winners_click_rate.png')
+plt.hist(winners['click_rate'], 30, (0, .1))
+#plt.savefig('winners_click_rate.png')
 plt.show()
-'''
 
-#a = pd.merge(grouped_df, highest_clicks)
-#print(a.head())
-#In general winners have higher click count than first places
-'''
-clicks = packages.groupby('test_week').sum()
-plt.Figure()
-plt.plot(clicks['clicks']/clicks['impressions'])
-plt.title("Click rate over time")
-plt.savefig('clicks.png')
-print(p)
-'''
+
+plt.figure(figsize = (10,5))
+plt.title('Proportion of first places chosen by editors over time')
+plt.plot(first_places.groupby('test_week')['winner'].mean())
+plt.grid()
+#plt.savefig('chosen_first_places.png')
+plt.show()
+
+print(packages[packages['test_week'] < '2013-04-01'].shape[0])
+print(packages[(packages['test_week'] > '2013-04-01') & (packages['test_week'] < '2013-07-01')].shape[0])
