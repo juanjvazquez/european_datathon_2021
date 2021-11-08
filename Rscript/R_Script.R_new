@@ -1,0 +1,250 @@
+library(pacman)
+pacman::p_load(pacman,dplyr,GGally, ggplot2,ggthemes,ggvis,httr,lubridate,plotly,rio,rmarkdown,shiny,stringr,tidyr,markdown,rprojroot)
+p_load(psych)
+library(readxl)
+analytics <- read.delim("C:/Users/Gokhan Mutlu/Desktop/datathon/analytics.txt")
+View(analytics)
+attach(analytics)
+
+#This turns of scientific notation that appears on graphs - if you set this to zero it will go back to sci notation
+options(scipen=999)
+
+#look at variables
+names(analytics)
+
+#Create new variables and attach to new dataframe caled analytics2- this is expected to give better graphs
+pageviews_g_m <-data.frame(pageviews_g_m=(analytics$pageviews_general/1000000))
+pageviews_u_m <-data.frame(pageviews_u_m=(analytics$pageviews_user/1000000))
+users_m<-data.frame(users_m=(analytics$users/1000000))
+New_users_m<-data.frame(New_users_m=(analytics$new_users/1000000))
+analytics2<-cbind(analytics,users_m,pageviews_g_m,New_users_m,pageviews_u_m)
+
+#Visualize pageviews
+#1.histograms
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+hist(analytics2$pageviews_general, xlab=(paste("No of Pageviews From User Data")), main="Histogram of Pageviews From User Data")
+hist(analytics2$pageviews_user, xlab=(paste("No of Pageviews From General Data")), main="Histogram of Pageviews From General Data")
+
+#2.scatterplots in general units or in millions
+plot(analytics2$pageviews_general,analytics2$pageviews_user, xlab=paste("No of Pageviews From General Data"), ylab=paste("No of Pageviews From User Data"), main="Pageviews")
+plot(analytics2$pageviews_g_m,analytics2$pageviews_u_m, xlab=paste("No of Pageviews From General Data","
+(millions)"), ylab=paste("No of Pageviews From User Data", "
+(millions)"), main="Pageviews")
+
+#3.overlay plot of time series graph data of pageview data from general google analytics vs pageview data from users sheet in millions
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(date_general_google,analytics2$pageviews_u_m, type="p", main ="Pageviews Over Time", ylab=(paste("No of Pageviews","
+(millions)")), xlab=" ", col=c("#0000FF"), cex=0.5, ylim= c(0,14))
+add=TRUE
+points(date_general_google,analytics2$pageviews_g_m, type="p", col=c("#FF00FF"), cex=0.5)
+legend(x="topright",
+       cex=0.6,
+       legend=(c("General Pageviews","User Pageviews")),
+       pch = 1,
+       col=c("#0000FF","#FF00FF"))
+
+#4. Overlay plot of time series graph of pageview data from general google analytics vs pageview data from users sheet
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(date_general_google,pageviews_user, type="p", main ="Pageviews Over Time", ylab=(paste("Number of","
+pageviews")), xlab=" ", col=c("#0000FF"), cex=0.5, ylim= c(0, 14000000))
+add=TRUE
+points(date_general_google,pageviews_general, type="p", col=c("#FF00FF"), cex=0.5)
+legend(x="topright",
+       cex=0.6,
+       legend=(c("General Pageviews","User Pageviews")),
+       pch = 1,
+       col=c("#0000FF","#FF00FF"))
+
+#Regression of Pageview General Data against Pageview User Data available Portion
+#1.General Regression is created here
+regPageviews <- lm (pageviews_user ~pageviews_general)
+summary(regPageviews)
+names(regPageviews)
+#2. histogram of Residuals
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+hist(regPageviews$residuals, main="Histogram of Residuals", xlab="Residuals from Regression of Pageviews")
+
+#Visualize User data
+#1. Histograms
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+hist(analytics2$users_m, xlab=(paste("No of Users (millions)")), main="Histogram of Number of Total Users")
+hist(analytics2$New_users_m, xlab=(paste("No of New Users (millions)")), main="Histogram of Number of New Users")
+
+#2. Overlay plot of User data
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(analytics2$date_general_google,analytics2$users_m, type="p", main ="All Users and New Users Over Time", ylab=(paste("No of users (millions)")), xlab="Year", col=c("#FF0099"), cex=0.5, ylim= c(0,14))
+add=TRUE
+points(analytics2$date_general_google,analytics2$New_users_m, type="p", col=c("#009999"), cex=0.5)
+legend(x="topright",
+       cex=0.6,
+       legend=(c("Total Users","New Users")),
+       pch = 1,
+       col=c("#FF0099","#009999"))
+
+#3.Overlay plot of User data and Pageview Data
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(analytics2$date_general_google,analytics2$users_m, type="p", main ="Users and Pageviews Over Time", ylab=(paste("Number (millions)")), xlab="Year", col=c("#0000FF"), cex=0.5, ylim=c(0,14))
+add=TRUE
+points(analytics2$date_general_google,analytics2$New_users_m, type="p", col=c("#009999"), cex=0.5)
+add=TRUE
+points(analytics2$date_general_google,analytics2$pageviews_g_m, type="p",col=c("#FF00FF"), cex=0.5)
+legend(x="topright",
+       cex=0.6,
+       legend=(c("Pageviews","Total Users","New Users")),
+       pch = 1,
+       col=c("#0000FF","#FF00FF","#009999"))
+
+#Visualize session and page data per user
+#1. add new session variable in millions
+sessions_m<-data.frame(sessions_m=(analytics$sessions/1000000))
+analytics2<-cbind(analytics,users_m,pageviews_g_m,New_users_m,pageviews_u_m,sessions_m)
+
+#2.Add expected variables based on expected logical relationships within data
+#Expected_Pageviews1 should equal Users X Sessions per User X Pages per Session
+Expected_Pageviews1<-data.frame(Expected_Pageviews1=(analytics2$users*analytics2$sessions_per_user*analytics2$pages_per_session))
+#Expected_sessions should equal Users X Sessions per User
+Expected_sessions<-data.frame(Expected_sessions=(analytics2$users *analytics2$sessions_per_user))
+#Expected_Pageviews2 should equal Sessions X Pages per session
+Expected_Pageviews2<-data.frame(Expected_Pageviews2=(analytics2$sessions* analytics2$pages_per_session))
+analytics2<-cbind(analytics2,Expected_Pageviews1,Expected_Pageviews2,Expected_sessions)
+
+#3. Histograms
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+hist(analytics2$sessions_m, xlab=(paste("No of Sessions (millions)")), main="Histogram of Number of Sessions")
+hist(analytics2$sessions_per_user, xlab=(paste("No of Sessions per User")), main="Histogram of Sessions per User")
+hist(analytics2$pages_per_session, xlab=(paste("No of Pages per Session")), main="Histogram of Number of Pages per Session")
+hist(analytics2$bounce_rate, xlab=(paste("Percent of Sessions with One Pageview")), main="Histogram of Percent of Sessions with One Pageview")
+hist(analytics2$session_duration, xlab=(paste("Session Duration (min:sec)")), main="Histogram of Session Duration", breaks=10)
+hist(analytics2$Expected_Pageviews1, xlab=(paste("Number of Expected_Pageviews1=Users*Sessions_per_user*pages_per_session")), main="Histogram of Expected_Pageviews1")
+hist(analytics2$Expected_Pageviews1, xlab=(paste("Number of Expected_Pageviews2=Sessions*pages_per_session")), main="Histogram of Expected_Pageviews2")
+hist(analytics2$Expected_sessions, xlab=(paste(" Number of Expected_Sessions=Users*Sessions_per_user")), main="Histogram of Expected_Sessions")
+
+#4. Overlay plots of Sessions and Expected Sessions
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(analytics2$date_general_google,analytics2$sessions, type="p", main ="Sessions Vs Expected Sessions Over Time", ylab=(paste("No of Sessions")), xlab=" ", col=c("#FF3300"), cex=0.5, ylim= c(0,14000000))
+add=TRUE
+points(analytics2$date_general_google,analytics2$Expected_sessions, type="p", col=c("#99FF00"), cex=0.5)
+add=TRUE
+legend(x="topright",
+       cex=0.6,
+       legend=(c("Sessions","Expected Sessions")),
+       pch = 1,
+       col=c("#FF3300","#99FF00"))
+
+#5. Overlay plots of Pageviews and Expected Pageviews
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(analytics2$date_general_google,analytics2$pageviews_general, type="p", main ="Pageviews Vs Expected_Pageviews Over Time", ylab=(paste("No of Pageviews")), xlab=" ", col=c("#0000FF"), cex=0.5, ylim= c(0,14000000))
+add=TRUE
+points(analytics2$date_general_google,analytics2$Expected_Pageviews1, type="p", col=c("#FF3300"), cex=0.5)
+add=TRUE
+points(analytics2$date_general_google,analytics2$Expected_Pageviews2, type="p", col=c("#99FF00"), cex=0.5)
+add=TRUE
+legend(x="topright",
+       cex=0.6,
+       legend=(c("Pageviews","Expected_Pageviews1","Expected_Pageviews2")),
+       pch = 1,
+       col=c("#0000FF","#FF3300","#99FF00"))
+
+#Regression of Pageview General Data against Expected Pageview Data
+#1.General Regression is created here for regression of pageviews vs Expected_Pageviews1
+regPageviews2 <- lm (analytics2$pageviews_general ~ analytics2$Expected_Pageviews1)
+summary(regPageviews2)
+names(regPageviews2)
+#2. histogram of Residuals
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+hist(regPageviews2$residuals, main="Histogram of Residuals2", xlab="Residuals from Regression of Pageviews2")
+#3.General Regression is created here for regression of pageviews vs Expected_Pageviews2
+regPageviews3 <- lm (analytics2$pageviews_general ~ analytics2$Expected_Pageviews2)
+summary(regPageviews3)
+names(regPageviews3)
+#4. histogram of Residuals
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+hist(regPageviews$residuals, main="Histogram of Residuals3", xlab="Residuals from Regression of Pageviews3")
+
+#Regression of Session Data against Expected Session Data
+#1.General Regression is created here for regression of sessions vs Expected_Sessions
+regSessions <- lm (analytics2$sessions ~ analytics2$Expected_sessions)
+summary(regSessions)
+names(regSessions)
+#2. histogram of Residuals
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+hist(regSessions$residuals, main="Histogram of Residuals", xlab="Residuals from Regression of Sessions vs Expected_Sessions")
+
+#Adding of Expected Sessions is perfectly fine since regression shows a R2 of 1
+Expected_sessions_m <- data.frame(Expected_sessions_m=(analytics2$Expected_sessions/1000000))
+analytics2<-cbind(analytics2,Expected_sessions_m)
+
+#Overlay plot of User data and Pageview Data and Session Data and New User Data-point format
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(analytics2$date_general_google,analytics2$users_m, type="p", main ="Users and Pageviews Over Time", ylab=(paste("Number (millions)")), xlab="Year", col=c("#0000FF"), cex=0.5, ylim=c(0,14))
+add=TRUE
+points(analytics2$date_general_google,analytics2$New_users_m, type="p", col=c("#009999"), cex=0.5)
+add=TRUE
+points(analytics2$date_general_google,analytics2$pageviews_g_m, type="p",col=c("#FF00FF"), cex=0.5)
+add=TRUE
+points(analytics2$date_general_google,analytics2$Expected_sessions_m, type="p",col=c("#FFFF33"), cex=0.5)
+legend(x="topright",
+       cex=0.6,
+       legend=(c("Pageviews","Total Users","New Users", "Sessions")),
+       pch = 1,
+       col=c("#0000FF","#FF00FF","#009999","#FFFF33"))
+
+#Overlay plot of User data and Pageview Data and Session Data - line format 
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(analytics2$date_general_google,analytics2$users_m, type="l", main ="Users and Pageviews Over Time", ylab=(paste("Number (millions)")), xlab="Year", col=c("#0000FF"), cex=0.5, ylim=c(0,14))
+add=TRUE
+points(analytics2$date_general_google,analytics2$pageviews_g_m, type="l",col=c("#FF00FF"), cex=0.5)
+add=TRUE
+points(analytics2$date_general_google,analytics2$Expected_sessions_m, type="l",col=c("#FFFF33"), cex=0.5)
+legend(x="topright",
+       cex=0.6,
+       legend=(c("Pageviews","Total Users","Sessions")),
+       lty= 1,
+       col=c("#FF00FF","#0000FF","#FFFF33"))
+
+#Overlay plot of User data and Pageview Data and Session Data and New User Data- line format
+par(cex.lab=0.6,cex.sub=0.8,cex.axis=0.8)
+plot(analytics2$date_general_google,analytics2$users_m, type="l", main ="Users and Pageviews Over Time", ylab=(paste("Number (millions)")), xlab="Year", col=c("#0000FF"), cex=0.5, ylim=c(0,14))
+add=TRUE
+points(analytics2$date_general_google,analytics2$New_users_m, type="l", col=c("#009999"), cex=0.5)
+add=TRUE
+points(analytics2$date_general_google,analytics2$pageviews_g_m, type="l",col=c("#FF00FF"), cex=0.5)
+add=TRUE
+points(analytics2$date_general_google,analytics2$Expected_sessions_m, type="l",col=c("#FFFF33"), cex=0.5)
+legend(x="topright",
+         cex=0.6,
+         legend=(c("Pageviews","Total Users","New Users", "Sessions")),
+         lty = 1,
+         col=c("#0000FF","#FF00FF","#009999","#FFFF33"))
+
+#GGPlots
+#1.Plot of users,new users, pageviews, sessions
+ggplot()+geom_line(data=analytics2,aes(x=date_general_google,y=users_m),
+color="red")+geom_line(data=analytics2,aes(x=date_general_google,y=New_users_m),
+color="orange")+geom_line(data=analytics2,aes(x=date_general_google,y=pageviews_g_m),
+color="blue")+geom_line(data=analytics2,aes(x=date_general_google,y=Expected_sessions_m),
+color=("green"))+xlab("Date")+ylab("Numbers (million)")
+
+#2.Plot of users,pageviews, sessions
+ggplot()+geom_line(data=analytics2,aes(x=date_general_google,y=users_m),
+color="red")+geom_line(data=analytics2,aes(x=date_general_google,y=pageviews_g_m),
+color="blue")+geom_line(data=analytics2,aes(x=date_general_google,y=Expected_sessions_m),
+color=("green"))+xlab("Date")+ylab("Numbers (million)")
+
+#3.Plot of users,pageviews
+ggplot()+geom_line(data=analytics2,aes(x=date_general_google,y=users_m),
+color="red")+geom_line(data=analytics2,aes(x=date_general_google,y=pageviews_g_m),
+color="blue")+xlab("Date")+ylab("Numbers (million)")
+
+#4.Interactive plot Users and Pageviews 
+Interactive_plot_Users_Pageviews<- ggplot()+geom_line(data=analytics2,aes(x=date_general_google,y=users_m),color="red")+geom_line(data=analytics2,aes(x=date_general_google,y=pageviews_g_m),
+color="blue")+xlab("Date")+ylab("Numbers (million)")
+ggplotly(Interactive_plot_Users_Pageviews)
+
+
+
+
+
+
+
+
