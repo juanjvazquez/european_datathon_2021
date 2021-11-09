@@ -12,5 +12,5 @@ This submission won the **1st place 10,000€ award** and an invitation to the D
 All authors worked equally towards the making of this project and are not listed in any particular order:
 - Agathiyan Bragadeesh `<agathiyan02@gmail.com>`
 - Emre Mutlu `<emre.mutlu@wadham.ox.ac.uk>`
-- Juan J. Vazquez `<vazquez@tcd.ie>`
+- Juan J. Vazquez `<vazquezj@tcd.ie>`
 - Chun H. Yip `<chy34@cam.ac.uk>`
